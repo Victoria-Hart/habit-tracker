@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "habit-tracker"
+version = "0.1.0"
+description = "A simple CLI habit tracking and analysis tool"
+
+[project.scripts]
+habit-tracker = "habit_tracker.main:run"
