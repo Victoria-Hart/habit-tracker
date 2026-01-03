@@ -1,3 +1,5 @@
+from habit_tracker.config import DATA_PATH
+
 def get_non_empty_string(prompt):
     value = input(prompt).strip()
     if not value:

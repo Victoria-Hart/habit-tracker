@@ -4,25 +4,9 @@
       "id": 1,
       "name": "gym",
       "description": "go to the gym 3 times per week",
-      "completed_days": []
-    },
-    {
-      "id": 2,
-      "name": "water",
-      "description": "drink 8 cups of water per day",
-      "completed_days": []
-    },
-    {
-      "id": 3,
-      "name": "protein",
-      "description": "GAINZ",
-      "completed_days": []
-    },
-    {
-      "id": 4,
-      "name": "Walk the dog",
-      "description": "twice per day",
-      "completed_days": []
+      "completed_days": [
+        "2026-01-03"
+      ]
     }
   ]
 }

@@ -1,7 +1,9 @@
 import json
-from config import DATA_PATH
-from models.habit import Habit
-from utils.input_handler import(get_non_empty_string, get_optional_string, get_int)
+from datetime import date
+from habit_tracker.config import DATA_PATH
+from habit_tracker.models.habit import Habit
+from habit_tracker.utils import logger
+from habit_tracker.utils.input_handler import(get_non_empty_string, get_optional_string, get_int)
 
 # ----- JSON helpers ----- 
 
@@ -77,7 +79,7 @@ def edit_habit():
             None)
         
         if habit is None:
-            print("Habit not found. Try again.")
+            print("Habit not found. Try again.") ### LOGGER ADD? ###
             continue
 
         try:
@@ -102,7 +104,7 @@ def delete_habit():
             habit_id = get_int("Enter habit ID to delete (0 to go back): ") #input_handler.py checks for valid input
         except ValueError as e:
             print(e)
-            continue  # ask again
+            continue  # ask again  ### LOGGER ADD? ###
 
         if habit_id == 0:
                 return
@@ -114,37 +116,75 @@ def delete_habit():
         )
 
         if habit is None:
-            print("Habit not found. Try again.")
+            print("Habit not found. Try again.") ### LOGGER ADD? ###
             continue  # ask again
 
         # Confirmation
         confirm = input(
-            f"Are you sure you want to delete '{habit['name']}'? (YES/NO): "
+            f"Are you sure you want to delete '{habit['name']}'? (YES/NO): " ### LOGGER ADD? ###
         ).strip().upper()
 
         if confirm == "NO":
-            print("Deletion cancelled.")
+            print("Deletion cancelled.") ### LOGGER ADD? ###
             return  # back to menu
 
         if confirm == "YES":
             data["habits"].remove(habit)
             save_habits(data)
-            print(f"Habit {habit['name']} deleted.")
+            print(f"Habit {habit['name']} deleted.") ### LOGGER ADD? ###
             return  # back to menu
 
         print("Please type YES or NO.")
+
+### Mark Habit Done ###
+
+def mark_habit_done():
+    data = load_habits()
+    list_habits(data)
+
+    while True:
+        try:
+            habit_id = get_int("Enter habit ID to mark as done (0 to go back): ")
+        except ValueError as e:
+            print(e)
+            continue
+
+        habit = next(
+            (h for h in data["habits"] if h["id"] == habit_id),
+            None
+        )
+
+        if habit is None:
+            print("Habit not found.") ### LOGGER ADD? ###
+            continue
+
+        today = date.today().isoformat()
+
+        if today in habit["completed_days"]:
+            print("Habit already marked as done today.") ### LOGGER ADD? ###
+            return
+        
+        habit["completed_days"].append(today)
+        save_habits(data)
+
+        print(f"Habit '{habit['name']}' marked as done today!") ### LOGGER ADD?###
+        return
+
 
 
 # ----- MAIN MENU LOOP ----- 
 
 def main():
+    logger.info("Habit Tracker started")
+    
     while True:
         print("\n Habit Tracker \n")
         print("1. Add habit")
         print("2. List habits")
         print("3. Edit habit")
         print("4. Delete habit")
-        print("5. Exit\n")
+        print("5. Mark habit as done")
+        print("6. Exit\n")
 
         choice = input("Choose an option: ").strip()
 
@@ -158,10 +198,15 @@ def main():
         elif choice == "4":
             delete_habit()
         elif choice == "5":
+            mark_habit_done()
+        elif choice == "6":
             print("Goodbye!")
             break
         else:
             print("Invalid choice.")
+
+def run():
+    main()
 
 if __name__ == "__main__":
     main()
