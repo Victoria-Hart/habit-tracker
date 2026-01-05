@@ -15,11 +15,20 @@ def load_habits():
         return {"next_id": 1, "habits": []}
 
     try:
+        # Handle empty file
+        if DATA_PATH.stat().st_size == 0:
+            logger.warning("Habits file is empty. Reinitializing.")
+            return {"next_id": 1, "habits": []}
+        
         with open(DATA_PATH, "r", encoding="utf-8") as f:
             json_data = json.load(f)
             logger.debug(f"Loaded habits data: {json_data}")            ### Logger DEBUG example ###
 
         # ----- Backward compatibility -----
+        if "habits" not in json_data:
+            json_data["habits"] = []
+            logger.warning("Missing 'habits' key. Initialized empty list.")
+
         if "next_id" not in json_data:
             max_id = max((h["id"] for h in json_data.get("habits", [])), default=0)
             json_data["next_id"] = max_id + 1
@@ -76,6 +85,36 @@ def prompt_for_existing_habit(data, prompt):
             continue
 
         return habit
+    
+def prompt_for_frequency():
+    while True:
+        print("Frequency type:")
+        print("1. Daily")
+        print("2. Weekly")
+        print("3. Monthly")
+
+        choice = input("Choose frequency type: ")
+
+        if choice == "1":
+            freq_type = "daily"
+        elif choice == "2":
+            freq_type = "weekly"
+        elif choice == "3":
+            freq_type = "monthly"
+        else:
+            print("Invalid choice. Try again.")
+            continue
+
+        try:
+            times = get_int(f"How many times {freq_type}?")
+            if times < 1:
+                raise ValueError
+        except ValueError:
+                logger.info("Invalid input for times")
+                print("Please enter a number greater than 0.")
+                continue
+        
+        return freq_type, times
 
 def confirm_action(prompt):
     """Ask the user to confirm an action. Returns True for YES, False for NO. Keeps prompting until valid input is given."""
@@ -105,7 +144,10 @@ def add_habit():
         print(e)
         return
 
-    new_habit = Habit(new_id, name, description)
+    frequency_type, frequency_times = prompt_for_frequency()
+
+    new_habit = Habit(new_id, name, description, frequency_type, frequency_times)
+
     data["habits"].append(new_habit.to_dict())
     save_habits(data)
 
@@ -122,7 +164,11 @@ def list_habits(data):
     print("(Unique ID: Habit Name - Description) \n")
 
     for habit in data["habits"]:
-        print(f"{habit['id']}: {habit['name']} - {habit['description']}\n")
+        freq = habit["frequency"]
+        print(
+        f"{habit['id']}: {habit['name']} "
+        f"- {habit['description']} "
+        f"({freq['times']}x {freq['type']})\n")
     return True
 
 ### Edit Habit ###
@@ -153,7 +199,6 @@ def edit_habit():
     logger.debug("User exited edit-habit menu.")
     return
 
-    
 ### Delete Habit ###
 
 def delete_habit():
