@@ -15,11 +15,20 @@ def load_habits():
         return {"next_id": 1, "habits": []}
 
     try:
+        # Handle empty file
+        if DATA_PATH.stat().st_size == 0:
+            logger.warning("Habits file is empty. Reinitializing.")
+            return {"next_id": 1, "habits": []}
+        
         with open(DATA_PATH, "r", encoding="utf-8") as f:
             json_data = json.load(f)
             logger.debug(f"Loaded habits data: {json_data}")            ### Logger DEBUG example ###
 
         # ----- Backward compatibility -----
+        if "habits" not in json_data:
+            json_data["habits"] = []
+            logger.warning("Missing 'habits' key. Initialized empty list.")
+
         if "next_id" not in json_data:
             max_id = max((h["id"] for h in json_data.get("habits", [])), default=0)
             json_data["next_id"] = max_id + 1
@@ -76,6 +85,36 @@ def prompt_for_existing_habit(data, prompt):
             continue
 
         return habit
+    
+def prompt_for_frequency():
+    while True:
+        print("Frequency type:")
+        print("1. Daily")
+        print("2. Weekly")
+        print("3. Monthly")
+
+        choice = input("Choose frequency type: ")
+
+        if choice == "1":
+            freq_type = "daily"
+        elif choice == "2":
+            freq_type = "weekly"
+        elif choice == "3":
+            freq_type = "monthly"
+        else:
+            print("Invalid choice. Try again.")
+            continue
+
+        try:
+            times = get_int(f"How many times {freq_type}?")
+            if times < 1:
+                raise ValueError
+        except ValueError:
+            logger.info("Invalid input for times")
+            print("Please enter a number greater than 0.")
+            continue
+        
+        return freq_type, times
 
 def confirm_action(prompt):
     """Ask the user to confirm an action. Returns True for YES, False for NO. Keeps prompting until valid input is given."""
@@ -92,6 +131,34 @@ def confirm_action(prompt):
 
 # ----- Features ----- 
 
+# ----- HABIT MANAGER ----- 
+
+def manage_habits_menu():
+    while True:
+        print("\nManage Habits Menu\n")
+
+        print("1. List habits")
+        print("2. Add habit")
+        print("3. Edit habit")
+        print("4. Delete habit")
+        print("0. Back")
+
+        choice = input("Choose an option: ").strip()
+
+        if choice == "1":
+            data = load_habits()
+            list_habits(data)
+        elif choice == "2":
+            add_habit()
+        elif choice == "3":
+            edit_habit()
+        elif choice == "4":
+            delete_habit()
+        elif choice == "0":
+            return
+        else:
+            logger.info(f"Invalid menu choice: {choice}. Try again.")
+
 ### Add a Habit ###
 
 def add_habit():
@@ -105,7 +172,10 @@ def add_habit():
         print(e)
         return
 
-    new_habit = Habit(new_id, name, description)
+    frequency_type, frequency_times = prompt_for_frequency()
+
+    new_habit = Habit(new_id, name, description, frequency_type, frequency_times)
+
     data["habits"].append(new_habit.to_dict())
     save_habits(data)
 
@@ -122,7 +192,11 @@ def list_habits(data):
     print("(Unique ID: Habit Name - Description) \n")
 
     for habit in data["habits"]:
-        print(f"{habit['id']}: {habit['name']} - {habit['description']}\n")
+        freq = habit["frequency"]
+        print(
+        f"{habit['id']}: {habit['name']} "
+        f"- {habit['description']} "
+        f"({freq['times']}x {freq['type']})\n")
     return True
 
 ### Edit Habit ###
@@ -153,7 +227,6 @@ def edit_habit():
     logger.debug("User exited edit-habit menu.")
     return
 
-    
 ### Delete Habit ###
 
 def delete_habit():
@@ -173,6 +246,28 @@ def delete_habit():
         logger.info(f"Habit '{habit['name']}' deleted.")
     else:
         logger.info(f"Deletion cancelled for habit '{habit['name']}'.")
+
+
+# ----- HABIT TRACKER -----
+
+def track_habits_menu():
+    while True:
+        print("\nTrack Habits Menu\n")
+
+        print("1. Mark habit done today")
+        print("2. Mark habit done another day")
+        print("0. Back")
+
+        choice = input("Choose an option: ").strip()
+
+        if choice == "1":
+            mark_habit_done_for_date(date.today().isoformat())
+        elif choice == "2":
+            mark_habit_done_for_date()
+        elif choice == "0":
+            return
+        else:
+            logger.info(f"Invalid menu choice: {choice}. Try again.")
 
 ### Mark Habit Done ###
 
@@ -202,6 +297,22 @@ def mark_habit_done_for_date(target_date=None):
 
     logger.info(f"Habit '{habit['name']}' marked done on {target_date}.")
 
+# ----- HABIT STATS -----
+
+def stats_menu():
+    print("Coming soon!")
+    return
+    """ 
+    while True:
+        print("\nHabit Statistics\n")
+
+        print("1. Overview")
+        print("2. Current streaks")
+        print("3. Best streaks")
+        print("4. Weekly / Monthly summary")
+        print("0. Back")
+
+    """
     
     
 # ----- MAIN MENU LOOP ----- 
@@ -209,6 +320,30 @@ def mark_habit_done_for_date(target_date=None):
 def main():
     logger.debug("Habit Tracker started")
     
+    while True:
+        print("\n Habit Tracker \n")
+        print("1. Manage habits")
+        print("2. Track habits")
+        print("3. View Statistics")
+        print("4. Exit")
+    
+        choice = input("Choose an option: ").strip()
+
+        if choice == "1":
+            manage_habits_menu()
+        elif choice == "2":
+            track_habits_menu()
+        elif choice == "3":
+            stats_menu()
+        elif choice == "4":
+            print("Goodbye!")
+            logger.debug("Habit Tracker stopped")
+            break
+        else:
+            logger.info(f"Invalid menu choice: {choice}. Try again.")
+        
+    
+    """
     while True:
         print("\n Habit Tracker \n")
         print("1. Add habit")
@@ -221,15 +356,7 @@ def main():
 
         choice = input("Choose an option: ").strip()
 
-        if choice == "1":
-            add_habit()
-        elif choice == "2":
-            data = load_habits()
-            list_habits(data)
-        elif choice == "3":
-            edit_habit()
-        elif choice == "4":
-            delete_habit()
+        
         elif choice == "5":
             mark_habit_done_for_date(date.today().isoformat())
         elif choice == "6":
@@ -239,7 +366,7 @@ def main():
             logger.debug("Habit Tracker stopped")
             break
         else:
-            logger.info(f"Invalid menu choice: {choice}. Try again.")
+            logger.info(f"Invalid menu choice: {choice}. Try again.") """
 
 def run():
     main()
