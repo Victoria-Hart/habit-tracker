@@ -110,9 +110,9 @@ def prompt_for_frequency():
             if times < 1:
                 raise ValueError
         except ValueError:
-                logger.info("Invalid input for times")
-                print("Please enter a number greater than 0.")
-                continue
+            logger.info("Invalid input for times")
+            print("Please enter a number greater than 0.")
+            continue
         
         return freq_type, times
 
@@ -130,6 +130,34 @@ def confirm_action(prompt):
         logger.info(f"Invalid confirmation input: {answer}")
 
 # ----- Features ----- 
+
+# ----- HABIT MANAGER ----- 
+
+def manage_habits_menu():
+    while True:
+        print("\nManage Habits Menu\n")
+
+        print("1. List habits")
+        print("2. Add habit")
+        print("3. Edit habit")
+        print("4. Delete habit")
+        print("0. Back")
+
+        choice = input("Choose an option: ").strip()
+
+        if choice == "1":
+            data = load_habits()
+            list_habits(data)
+        elif choice == "2":
+            add_habit()
+        elif choice == "3":
+            edit_habit()
+        elif choice == "4":
+            delete_habit()
+        elif choice == "0":
+            return
+        else:
+            logger.info(f"Invalid menu choice: {choice}. Try again.")
 
 ### Add a Habit ###
 
@@ -219,6 +247,28 @@ def delete_habit():
     else:
         logger.info(f"Deletion cancelled for habit '{habit['name']}'.")
 
+
+# ----- HABIT TRACKER -----
+
+def track_habits_menu():
+    while True:
+        print("\nTrack Habits Menu\n")
+
+        print("1. Mark habit done today")
+        print("2. Mark habit done another day")
+        print("0. Back")
+
+        choice = input("Choose an option: ").strip()
+
+        if choice == "1":
+            mark_habit_done_for_date(date.today().isoformat())
+        elif choice == "2":
+            mark_habit_done_for_date()
+        elif choice == "0":
+            return
+        else:
+            logger.info(f"Invalid menu choice: {choice}. Try again.")
+
 ### Mark Habit Done ###
 
 def mark_habit_done_for_date(target_date=None):
@@ -247,6 +297,22 @@ def mark_habit_done_for_date(target_date=None):
 
     logger.info(f"Habit '{habit['name']}' marked done on {target_date}.")
 
+# ----- HABIT STATS -----
+
+def stats_menu():
+    print("Coming soon!")
+    return
+    """ 
+    while True:
+        print("\nHabit Statistics\n")
+
+        print("1. Overview")
+        print("2. Current streaks")
+        print("3. Best streaks")
+        print("4. Weekly / Monthly summary")
+        print("0. Back")
+
+    """
     
     
 # ----- MAIN MENU LOOP ----- 
@@ -254,6 +320,30 @@ def mark_habit_done_for_date(target_date=None):
 def main():
     logger.debug("Habit Tracker started")
     
+    while True:
+        print("\n Habit Tracker \n")
+        print("1. Manage habits")
+        print("2. Track habits")
+        print("3. View Statistics")
+        print("4. Exit")
+    
+        choice = input("Choose an option: ").strip()
+
+        if choice == "1":
+            manage_habits_menu()
+        elif choice == "2":
+            track_habits_menu()
+        elif choice == "3":
+            stats_menu()
+        elif choice == "4":
+            print("Goodbye!")
+            logger.debug("Habit Tracker stopped")
+            break
+        else:
+            logger.info(f"Invalid menu choice: {choice}. Try again.")
+        
+    
+    """
     while True:
         print("\n Habit Tracker \n")
         print("1. Add habit")
@@ -266,15 +356,7 @@ def main():
 
         choice = input("Choose an option: ").strip()
 
-        if choice == "1":
-            add_habit()
-        elif choice == "2":
-            data = load_habits()
-            list_habits(data)
-        elif choice == "3":
-            edit_habit()
-        elif choice == "4":
-            delete_habit()
+        
         elif choice == "5":
             mark_habit_done_for_date(date.today().isoformat())
         elif choice == "6":
@@ -284,7 +366,7 @@ def main():
             logger.debug("Habit Tracker stopped")
             break
         else:
-            logger.info(f"Invalid menu choice: {choice}. Try again.")
+            logger.info(f"Invalid menu choice: {choice}. Try again.") """
 
 def run():
     main()
