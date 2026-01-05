@@ -1,41 +1,106 @@
 import json
 from datetime import date
+
 from habit_tracker.config import DATA_PATH
 from habit_tracker.models.habit import Habit
 from habit_tracker.utils import logger
-from habit_tracker.utils.input_handler import(get_non_empty_string, get_optional_string, get_int)
+from habit_tracker.utils.input_handler import(get_non_empty_string, get_optional_string, get_int, get_valid_date)
 
-# ----- JSON helpers ----- 
+# ----- JSON / Data helpers ----- 
 
 def load_habits():
+    # File does not exist yet
     if not DATA_PATH.exists():
-        return {"habits": []}
-    
-    with open(DATA_PATH, "r", encoding="UTF-8") as f:
-        return json.load(f)
+        logger.warning("Habits file not found. Creating new file.")     ### Logger WARNING example - missing file ### 
+        return {"next_id": 1, "habits": []}
 
-def save_habits(habits):
-    with open(DATA_PATH, "w", encoding="UTF-8") as f:
-        json.dump(habits, f, indent=2)
+    try:
+        with open(DATA_PATH, "r", encoding="utf-8") as f:
+            json_data = json.load(f)
+            logger.debug(f"Loaded habits data: {json_data}")            ### Logger DEBUG example ###
+
+        # ----- Backward compatibility -----
+        if "next_id" not in json_data:
+            max_id = max((h["id"] for h in json_data.get("habits", [])), default=0)
+            json_data["next_id"] = max_id + 1
+            logger.debug(f"Added missing next_id field (starting at {json_data['next_id']})")
+
+        return json_data
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Habits file is corrupted: {e}")                  ### Logger ERROR example - corrupted file ###
+        raise
+    
+def save_habits(data):
+    try:
+        logger.debug(f"Saving habits to {DATA_PATH}")                   ### Logger DEBUG example ###
+        logger.debug(f"Data to save: {data}")                         ### Logger DEBUG example ###
+
+        with open(DATA_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+            logger.info("Habits saved successfully.")                   ### Logger INFO example ###
+    except Exception as e:
+        logger.error(f"Failed to save habits: {e}")                     ### Logger ERROR example ###
+        raise
+
+def get_new_id(data):
+    new_id = data["next_id"]
+    data["next_id"] += 1
+    return new_id
+
+def find_habit_by_id(data, habit_id):
+    """Return habit dictionary with matching ID if found, or None if it doesn't exist."""
+    for habit in data['habits']:
+        if habit['id'] == habit_id:
+            return habit
+    return None
+
+def prompt_for_existing_habit(data, prompt):
+    """Prompt user for habit ID and return habit. Returns None if users choose 0 (Go back)"""
+    while True:
+        try:
+            habit_id = get_int(prompt)
+        except ValueError as e:
+            print(e)
+            logger.info("Invalid habit ID input.")
+            continue
+
+        if habit_id == 0:
+            logger.debug("User chose to go back.")
+            return None
+
+        habit = find_habit_by_id(data, habit_id)
+        if habit is None:
+            print("Habit not found. Try again.")
+            logger.info(f"Habit ID {habit_id} not found.")
+            continue
+
+        return habit
+
+def confirm_action(prompt):
+    """Ask the user to confirm an action. Returns True for YES, False for NO. Keeps prompting until valid input is given."""
+    while True:
+        answer = input(f"{prompt} (YES/NO): ").strip().upper()
+
+        if answer == "YES":
+            return True
+        if answer == "NO":
+            return False
+
+        print("Please type YES or NO.")
+        logger.info(f"Invalid confirmation input: {answer}")
 
 # ----- Features ----- 
-
-### Generate new id ###
-
-def get_new_id(habits):
-    if not habits:
-        return 1
-    return max(h["id"] for h in habits) + 1
 
 ### Add a Habit ###
 
 def add_habit():
     data = load_habits()
-    new_id = get_new_id(data["habits"])
+    new_id = get_new_id(data)
 
     try:
-        name = get_non_empty_string("Habit name: ") #input_handler.py checks for valid input
-        description = get_optional_string("Description (optional): ") #input_handler.py checks for valid input
+        name = get_non_empty_string("Habit name: ")                     #input_handler.py checks for valid input
+        description = get_optional_string("Description (optional): ")   #input_handler.py checks for valid input
     except ValueError as e:
         print(e)
         return
@@ -44,7 +109,7 @@ def add_habit():
     data["habits"].append(new_habit.to_dict())
     save_habits(data)
 
-    print(f"Habit '{name}' added successfully!")
+    logger.info(f"Habit '{name}' added successfully.")
 
 ### List Habits ###
 
@@ -55,127 +120,94 @@ def list_habits(data):
     
     print("\nYour habits:\n")
     print("(Unique ID: Habit Name - Description) \n")
+
     for habit in data["habits"]:
-        print(f"{habit["id"]}: {habit["name"]} - {habit["description"]}\n")
+        print(f"{habit['id']}: {habit['name']} - {habit['description']}\n")
+    return True
 
 ### Edit Habit ###
 
 def edit_habit():
     data = load_habits()
     list_habits(data)
-    
-    while True:
-        try:
-            habit_id = get_int("Enter habit ID to edit (0 to go back): ") #input_handler.py checks for valid input
-        except ValueError as e:
-            print(e)
-            continue
+    logger.debug("User entered edit-habit menu.")
 
-        if habit_id == 0:
-                return
-        
-        habit = next(
-            (h for h in data["habits"] if int(h["id"]) == habit_id),
-            None)
-        
-        if habit is None:
-            print("Habit not found. Try again.") ### LOGGER ADD? ###
-            continue
-
-        try:
-            habit["name"] = get_non_empty_string("New name: ") #input_handler.py checks for valid input
-            habit["description"] = get_optional_string("New description (optional): ") #input_handler.py checks for valid input
-        except  ValueError as e:
-                    print(e)
-                    continue
-                
-        save_habits(data)
-        print("Habit updated.")
+    if not data['habits']:
+        print("No habits in list.")
         return
+
+    habit = prompt_for_existing_habit(data, "Enter habit ID to edit (0 to go back): ")
+    if habit is None:
+        return
+
+    try:
+        habit["name"] = get_non_empty_string("New name: ")                              #input_handler.py checks for valid input
+        habit["description"] = get_optional_string("New description (optional): ")      #input_handler.py checks for valid input
+    except ValueError as e:
+        print(e)
+        logger.info("Invalid input while editing habit.")
+        return
+
+    save_habits(data)
+    logger.info(f"Habit '{habit['name']}' updated.")                                    ### Logger INFO example
+    logger.debug("User exited edit-habit menu.")
+    return
+
     
 ### Delete Habit ###
 
 def delete_habit():
     data = load_habits()
     list_habits(data)
+    logger.debug("User entered delete-habit menu.")
 
-    while True:
-        try:
-            habit_id = get_int("Enter habit ID to delete (0 to go back): ") #input_handler.py checks for valid input
-        except ValueError as e:
-            print(e)
-            continue  # ask again  ### LOGGER ADD? ###
+    habit = prompt_for_existing_habit(data, "Enter habit ID to delete (0 to go back): ")
+    if habit is None:
+        logger.debug("User exited delete-habit menu.")
+        return
 
-        if habit_id == 0:
-                return
-
-        # Find habit
-        habit = next(
-            (h for h in data["habits"] if int(h["id"]) == habit_id),
-            None
-        )
-
-        if habit is None:
-            print("Habit not found. Try again.") ### LOGGER ADD? ###
-            continue  # ask again
-
-        # Confirmation
-        confirm = input(
-            f"Are you sure you want to delete '{habit['name']}'? (YES/NO): " ### LOGGER ADD? ###
-        ).strip().upper()
-
-        if confirm == "NO":
-            print("Deletion cancelled.") ### LOGGER ADD? ###
-            return  # back to menu
-
-        if confirm == "YES":
-            data["habits"].remove(habit)
-            save_habits(data)
-            print(f"Habit {habit['name']} deleted.") ### LOGGER ADD? ###
-            return  # back to menu
-
-        print("Please type YES or NO.")
+    # Confirmation
+    if confirm_action(f"Are you sure you want to delete '{habit['name']}'"):
+        data["habits"].remove(habit)
+        save_habits(data)
+        logger.info(f"Habit '{habit['name']}' deleted.")
+    else:
+        logger.info(f"Deletion cancelled for habit '{habit['name']}'.")
 
 ### Mark Habit Done ###
 
-def mark_habit_done():
+def mark_habit_done_for_date(target_date=None):
     data = load_habits()
     list_habits(data)
+    logger.debug("User entered mark-habit-done menu.")
 
-    while True:
-        try:
-            habit_id = get_int("Enter habit ID to mark as done (0 to go back): ")
-        except ValueError as e:
-            print(e)
-            continue
-
-        habit = next(
-            (h for h in data["habits"] if h["id"] == habit_id),
-            None
-        )
-
-        if habit is None:
-            print("Habit not found.") ### LOGGER ADD? ###
-            continue
-
-        today = date.today().isoformat()
-
-        if today in habit["completed_days"]:
-            print("Habit already marked as done today.") ### LOGGER ADD? ###
-            return
-        
-        habit["completed_days"].append(today)
-        save_habits(data)
-
-        print(f"Habit '{habit['name']}' marked as done today!") ### LOGGER ADD?###
+    habit = prompt_for_existing_habit(
+        data, "Enter habit ID to mark as done (0 to go back): "
+    )
+    if habit is None:
+        logger.debug("User exited mark-habit-done menu.")
         return
 
+    if target_date is None:
+        target_date = get_valid_date("Enter date (YYYY-MM-DD): ")
 
+    if target_date in habit["completed_days"]:
+        logger.info(
+            f"Habit '{habit['name']}' was already marked as done on {target_date}."
+        )
+        return
 
+    habit["completed_days"].append(target_date)
+    save_habits(data)
+
+    logger.info(f"Habit '{habit['name']}' marked done on {target_date}.")
+
+    
+    
 # ----- MAIN MENU LOOP ----- 
 
 def main():
-    logger.info("Habit Tracker started")
+    logger.debug("Habit Tracker started")
     
     while True:
         print("\n Habit Tracker \n")
@@ -183,8 +215,9 @@ def main():
         print("2. List habits")
         print("3. Edit habit")
         print("4. Delete habit")
-        print("5. Mark habit as done")
-        print("6. Exit\n")
+        print("5. Mark habit done today")
+        print("6. Mark habit done another day")
+        print("7. Exit\n")
 
         choice = input("Choose an option: ").strip()
 
@@ -198,12 +231,15 @@ def main():
         elif choice == "4":
             delete_habit()
         elif choice == "5":
-            mark_habit_done()
+            mark_habit_done_for_date(date.today().isoformat())
         elif choice == "6":
+            mark_habit_done_for_date()
+        elif choice == "7":
             print("Goodbye!")
+            logger.debug("Habit Tracker stopped")
             break
         else:
-            print("Invalid choice.")
+            logger.info(f"Invalid menu choice: {choice}. Try again.")
 
 def run():
     main()

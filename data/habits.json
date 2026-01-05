@@ -1,12 +1,44 @@
 {
+  "next_id": 8,
   "habits": [
     {
       "id": 1,
       "name": "gym",
       "description": "go to the gym 3 times per week",
       "completed_days": [
+        "2026-01-03",
+        "2026-01-05"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "drink water",
+      "description": "8 cups per day",
+      "completed_days": [
+        "2026-01-05",
+        "2026-01-02",
         "2026-01-03"
       ]
+    },
+    {
+      "id": 3,
+      "name": "run",
+      "description": "2 times per week",
+      "completed_days": [
+        "2026-01-05"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "meditation",
+      "description": "20 min",
+      "completed_days": []
+    },
+    {
+      "id": 7,
+      "name": "bake",
+      "description": "bread",
+      "completed_days": []
     }
   ]
 }
