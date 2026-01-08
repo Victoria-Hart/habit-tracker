@@ -7,4 +7,4 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT/"data"
 
 # Habits file
-DATA_PATH = PROJECT_ROOT/"data"/"habits.json"
+DATA_PATH = PROJECT_ROOT/"data"/"habits_demo.json"
