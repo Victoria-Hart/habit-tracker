@@ -48,7 +48,7 @@ The project focuses on clear project structure, modular code, version control, a
 The file `data/habits_demo.json` contains example habits and completion data
 used to demonstrate the statistics and visualization features.
 
-To use it, replace `data/habits.json` with `data/habits_demo.json` before running
+To use it, replace `data/habits.json` with `data/habits_demo.json` in `config.py` before running
 the program.
 
 ## Assignment Mapping (Pythonprojekt)
