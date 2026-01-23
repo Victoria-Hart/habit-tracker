@@ -41,7 +41,7 @@ The project focuses on clear project structure, modular code, version control, a
 4. Install dependencies:
    pip install -r requirements.txt  
 5. Run the program:
-   python -m habit_tracker
+   habit-tracker
 
 ## Demo data (optional)
 
